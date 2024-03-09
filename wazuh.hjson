@@ -1,0 +1,78 @@
+[
+  {
+   "type": "getWazuhFindings",
+    "module": "wazuh",
+    "action": "getWazuhFindings",
+    "groupTitle": "Wazuh",
+    "groupIcon": "fas fa-shield-check",
+    "title": "Get Findings",
+    "icon": "fas fa-sync-alt",
+    "usedModules": {
+      "node": {
+        "axios": "^0.24.0"
+      }
+    }
+    "properties": [
+      {
+        "group": "Data",
+        "variables": [
+            {
+              "name": "actionName",
+              "optionName": "name",
+              "title": "Name",
+              "type": "text",
+              "required": true,
+              "defaultValue": "getWazuhFindings",
+              "help": "Specify the name of the action."
+            },
+            {
+              "name": "baseUrl",
+              "optionName": "base_url",
+              "title": "Base URL",
+              "type": "text",
+              "required": true,
+              "serverDataBindings": true,
+              "defaultValue": "https://localhost:55000",
+              "help": "Enter the base URL of the Wazuh server."
+            },
+            {
+              "name": "userName",
+              "optionName": "username",
+              "title": "Username",
+              "type": "text",
+              "required": true,
+              "serverDataBindings": true,
+              "defaultValue": "wazuh",
+              "help": "Enter the username for authenticating with the Wazuh server."
+            },
+            {
+              "name": "password",
+              "optionName": "password",
+              "title": "Password",
+              "type": "text",
+              "required": true,
+              "serverDataBindings": true,
+              "defaultValue": "wazuh",
+              "help": "Enter the password for authenticating with the Wazuh server."
+            },
+            {
+              "name": "wazuhGroup",
+              "optionName": "Group",
+              "title": "Group",
+              "type": "text",
+              "required": true,
+              "serverDataBindings": true,
+              "defaultValue": "Servers",
+              "help": "Specify the group for retrieving findings. If not provided, all agents will be considered."
+            }
+          ]
+      },
+      {
+        group: 'Output',
+        variables: [
+          { name: 'output', optionName: 'output', title: 'Output', initValue: true, defaultValue: false, type: 'boolean'}
+        ]
+      }
+    ]
+  }
+]
