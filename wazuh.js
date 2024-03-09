@@ -103,3 +103,90 @@ exports.getWazuhFindings = async function (options) {
         return { error: error.message };
     }
 };
+
+// Exporting the getAgents function
+exports.getAgents = async function (options) {
+    try {
+        const base_url = this.parse(options.base_url) || "https://localhost:55000";
+        const username = this.parse(options.username) || "wazuh";
+        const password = this.parse(options.password) || "wazuh";
+
+        const authenticate = async () => {
+            try {
+                const response = await axios.get(`${base_url}/security/user/authenticate?raw=true`, {
+                    auth: {
+                        username: username,
+                        password: password
+                    }
+                });
+                if (response.status === 200) {
+                    return `Bearer ${response.data}`;
+                } else {
+                    throw new Error(`Failed to authenticate. Status code: ${response.status}, Detail: ${response.data}`);
+                }
+            } catch (error) {
+                throw new Error(`Failed to authenticate: ${error}`);
+            }
+        };
+
+        const authToken = await authenticate();
+        const response = await axios.get(`${base_url}/agents`, {
+            headers: { Authorization: authToken },
+            params: { limit: 100000 }
+        });
+        return response.data.data.affected_items;
+    } catch (error) {
+        console.error(`Failed to retrieve agents. Error: ${error}`);
+        return [];
+    }
+};
+
+exports.upgradeAgents = async function (options) {
+    try {
+        const base_url = this.parse(options.base_url) || "https://localhost:55000";
+        const username = this.parse(options.username) || "wazuh";
+        const password = this.parse(options.password) || "wazuh";
+        
+        const authenticate = async () => {
+            try {
+                const response = await axios.get(`${base_url}/security/user/authenticate?raw=true`, {
+                    auth: {
+                        username: username,
+                        password: password
+                    }
+                });
+                if (response.status === 200) {
+                    return `Bearer ${response.data}`;
+                } else {
+                    throw new Error(`Failed to authenticate. Status code: ${response.status}, Detail: ${response.data}`);
+                }
+            } catch (error) {
+                throw new Error(`Failed to authenticate: ${error}`);
+            }
+        };
+
+        const upgradeAgentsEndpoint = `${base_url}/agents/upgrade`;
+
+        const authToken = await authenticate();
+        const response = await axios.put(upgradeAgentsEndpoint, {}, {
+            headers: { 
+                Authorization: authToken,
+                'Content-Type': 'application/json'
+            },
+            params: {
+                pretty: options.pretty || false,
+                wait_for_complete: options.wait_for_complete || false,
+                agents_list: options.agents_list || "all",
+                upgrade_version: options.upgrade_version,
+                use_http: options.use_http || false,
+                force: options.force || false,
+                group: options.group
+            }
+        });
+
+        return response.data;
+    } catch (error) {
+        console.error(`Error occurred while upgrading agents: ${error}`);
+        return { error: error.message };
+    }
+};

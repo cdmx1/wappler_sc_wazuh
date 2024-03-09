@@ -1,6 +1,6 @@
 [
   {
-   "type": "getWazuhFindings",
+    "type": "getWazuhFindings",
     "module": "wazuh",
     "action": "getWazuhFindings",
     "groupTitle": "Wazuh",
@@ -9,68 +9,262 @@
     "icon": "fas fa-sync-alt",
     "usedModules": {
       "node": {
-        "axios": "^0.24.0"
+        "axios": "^1.6.7"
       }
-    }
+    },
     "properties": [
       {
-        "group": "Data",
+        "group": "Options",
         "variables": [
-            {
-              "name": "actionName",
-              "optionName": "name",
-              "title": "Name",
-              "type": "text",
-              "required": true,
-              "defaultValue": "getWazuhFindings",
-              "help": "Specify the name of the action."
-            },
-            {
-              "name": "baseUrl",
-              "optionName": "base_url",
-              "title": "Base URL",
-              "type": "text",
-              "required": true,
-              "serverDataBindings": true,
-              "defaultValue": "https://localhost:55000",
-              "help": "Enter the base URL of the Wazuh server."
-            },
-            {
-              "name": "userName",
-              "optionName": "username",
-              "title": "Username",
-              "type": "text",
-              "required": true,
-              "serverDataBindings": true,
-              "defaultValue": "wazuh",
-              "help": "Enter the username for authenticating with the Wazuh server."
-            },
-            {
-              "name": "password",
-              "optionName": "password",
-              "title": "Password",
-              "type": "text",
-              "required": true,
-              "serverDataBindings": true,
-              "defaultValue": "wazuh",
-              "help": "Enter the password for authenticating with the Wazuh server."
-            },
-            {
-              "name": "wazuhGroup",
-              "optionName": "Group",
-              "title": "Group",
-              "type": "text",
-              "required": true,
-              "serverDataBindings": true,
-              "defaultValue": "Servers",
-              "help": "Specify the group for retrieving findings. If not provided, all agents will be considered."
-            }
-          ]
+          {
+            "name": "actionName",
+            "optionName": "name",
+            "title": "Name",
+            "type": "text",
+            "required": true,
+            "defaultValue": "getWazuhFindings",
+            "help": "Specify the name of the action."
+          },
+          {
+            "name": "baseUrl",
+            "optionName": "base_url",
+            "title": "Base URL",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "https://localhost:55000",
+            "help": "Enter the base URL of the Wazuh server."
+          },
+          {
+            "name": "userName",
+            "optionName": "username",
+            "title": "Username",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "wazuh",
+            "help": "Enter the username for authenticating with the Wazuh server."
+          },
+          {
+            "name": "password",
+            "optionName": "password",
+            "title": "Password",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "wazuh",
+            "help": "Enter the password for authenticating with the Wazuh server."
+          },
+          {
+            "name": "wazuhGroup",
+            "optionName": "Group",
+            "title": "Group",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "Servers",
+            "help": "Specify the group for retrieving findings. If not provided, all agents will be considered."
+          }
+        ]
       },
       {
-        group: 'Output',
-        variables: [
-          { name: 'output', optionName: 'output', title: 'Output', initValue: true, defaultValue: false, type: 'boolean'}
+        "group": "Output",
+        "variables": [
+          {
+            "name": "output",
+            "optionName": "output",
+            "title": "Output",
+            "initValue": true,
+            "defaultValue": false,
+            "type": "boolean"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "getAgents",
+    "module": "wazuh",
+    "action": "getAgents",
+    "groupTitle": "Wazuh",
+    "groupIcon": "fas fa-shield-check",
+    "title": "Get Agents",
+    "icon": "fas fa-download",
+    "usedModules": {
+      "node": {
+        "axios": "^1.6.7"
+      }
+    },
+    "properties": [
+      {
+        "group": "Options",
+        "variables": [
+          {
+            "name": "actionName",
+            "optionName": "name",
+            "title": "Name",
+            "type": "text",
+            "required": true,
+            "defaultValue": "getWazuhAgents",
+            "help": "Specify the name of the action."
+          },
+          {
+            "name": "baseUrl",
+            "optionName": "base_url",
+            "title": "Base URL",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "https://localhost:55000",
+            "help": "Enter the base URL of the Wazuh server."
+          },
+          {
+            "name": "userName",
+            "optionName": "username",
+            "title": "Username",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "wazuh",
+            "help": "Enter the username for authenticating with the Wazuh server."
+          },
+          {
+            "name": "password",
+            "optionName": "password",
+            "title": "Password",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "wazuh",
+            "help": "Enter the password for authenticating with the Wazuh server."
+          }
+        ]
+      },
+      {
+        "group": "Output",
+        "variables": [
+          {
+            "name": "output",
+            "optionName": "output",
+            "title": "Output",
+            "initValue": true,
+            "defaultValue": false,
+            "type": "boolean"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "updateAgents",
+    "module": "wazuh",
+    "action": "updateAgents",
+    "groupTitle": "Wazuh",
+    "groupIcon": "fas fa-shield-check",
+    "title": "Update Agents",
+    "icon": "fas fa-arrow-circle-up",
+    "usedModules": {
+      "node": {
+        "axios": "^1.6.7"
+      }
+    },
+    "properties": [
+      {
+        "group": "Options",
+        "variables": [
+          {
+            "name": "actionName",
+            "optionName": "name",
+            "title": "Name",
+            "type": "text",
+            "required": true,
+            "defaultValue": "updateAgents",
+            "help": "Specify the name of the action."
+          },
+          {
+            "name": "baseUrl",
+            "optionName": "base_url",
+            "title": "Base URL",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "https://localhost:55000",
+            "help": "Enter the base URL of the Wazuh server."
+          },
+          {
+            "name": "userName",
+            "optionName": "username",
+            "title": "Username",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "wazuh",
+            "help": "Enter the username for authenticating with the Wazuh server."
+          },
+          {
+            "name": "password",
+            "optionName": "password",
+            "title": "Password",
+            "type": "text",
+            "required": true,
+            "serverDataBindings": true,
+            "defaultValue": "wazuh",
+            "help": "Enter the password for authenticating with the Wazuh server."
+          },
+          {
+            "name": "agentsList",
+            "optionName": "agents_list",
+            "title": "Agents List",
+            "type": "text",
+            "defaultValue": "all",
+            "required": true,
+            "help": "List of agent IDs (separated by comma), use the keyword 'all' to select all agents."
+          },
+          {
+            "name": "upgradeVersion",
+            "optionName": "upgrade_version",
+            "title": "Upgrade Version",
+            "type": "text",
+            "help": "Specify the Wazuh version to upgrade to."
+          },
+          {
+            "name": "forceUpgrade",
+            "optionName": "force",
+            "title": "Force Upgrade",
+            "type": "boolean",
+            "defaultValue": false,
+            "help": "Force upgrade."
+          },
+          {
+            "name": "pretty",
+            "optionName": "pretty",
+            "title": "Pretty",
+            "type": "boolean",
+            "defaultValue": false,
+            "help": "Show results in human-readable format."
+          },
+          {
+            "name": "waitForComplete",
+            "optionName": "wait_for_complete",
+            "title": "Wait For Complete",
+            "type": "boolean",
+            "defaultValue": false,
+            "help": "Disable timeout response."
+          }
+        ]
+      },
+      {
+        "group": "Output",
+        "variables": [
+          {
+            "name": "output",
+            "optionName": "output",
+            "title": "Output",
+            "type": "boolean",
+            "initValue": true,
+            "defaultValue": false,
+            "help": "Specify whether to display the output."
+          }
         ]
       }
     ]
