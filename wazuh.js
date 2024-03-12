@@ -1,103 +1,104 @@
 const axios = require('axios');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const { Client } = require('@opensearch-project/opensearch'); 
 exports.getWazuhFindings = async function (options) {
-    try {
-        const base_url = this.parse(options.base_url) || "https://localhost:55000";
-        const username = this.parse(options.username) || "wazuh";
-        const password = this.parse(options.password) || "wazuh";
-        const group = this.parse(options.group) || "Servers";
+    const base_url = this.parse(options.base_url);
+    const username = this.parse(options.username);
+    const password = this.parse(options.password);
+    const today = new Date();
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago in milliseconds
+    
+    const from_date = `${sevenDaysAgo.getFullYear()}-${(sevenDaysAgo.getMonth() + 1).toString().padStart(2, '0')}-${sevenDaysAgo.getDate().toString().padStart(2, '0')}`;
+    const to_date = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+    const opensearchConfig = {
+        node: base_url,
+        auth: {
+            username: username,
+            password: password,
+        },
+        ssl: {
+            rejectUnauthorized: false,
+        },
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+    const opensearchClient = new Client(opensearchConfig);
+    const indexName = this.parse('wazuh-alerts-*');
 
-        const authenticate = async () => {
-            try {
-                const response = await axios.get(`${base_url}/security/user/authenticate?raw=true`, {
-                    auth: {
-                        username: username,
-                        password: password
+    const body = {
+        query: {
+            bool: {
+            must: [
+                {
+                    match_phrase: {
+                        "rule.groups" : "vulnerability-detector"
                     }
-                });
-                if (response.status === 200) {
-                    return `Bearer ${response.data}`;
-                } else {
-                    throw new Error(`Failed to authenticate. Status code: ${response.status}, Detail: ${response.data}`);
+                },
+                {
+                    "range": {
+                      "@timestamp": {
+                        "gte": from_date,
+                        "lte": to_date
+                      }
+                    }
                 }
-            } catch (error) {
-                throw new Error(`Failed to authenticate: ${error}`);
-            }
-        };
-
-        const getAgents = async () => {
-            try {
-                const authToken = await authenticate();
-                const response = await axios.get(`${base_url}/agents`, {
-                    headers: { Authorization: authToken },
-                    params: { limit: 100000 }
-                });
-                return response.data.data.affected_items;
-            } catch (error) {
-                console.error(`Failed to retrieve agents. Error: ${error}`);
-                return [];
-            }
-        };
-
-        const getAgentsInGroup = async () => {
-            if (!group) {
-                return await getAgents();
-            }
-            try {
-                const authToken = await authenticate();
-                const response = await axios.get(`${base_url}/groups/${group}/agents`, {
-                    headers: { Authorization: authToken },
-                    params: { limit: 100000 }
-                });
-                return response.data.data.affected_items;
-            } catch (error) {
-                console.error(`Failed to retrieve agents for group ${group}. Error: ${error}`);
-                return [];
-            }
-        };
-
-        const getVulnerabilitiesForAgent = async (agent_id, authToken) => {
-            try {
-                const response = await axios.get(`${base_url}/vulnerability/${agent_id}`, {
-                    headers: { Authorization: authToken },
-                    params: { limit: 100000 }
-                });
-                return response.data;
-            } catch (error) {
-                if (error.response.status === 400) {
-                    return null;
-                } else {
-                    console.error(`Failed to retrieve vulnerabilities for agent ${agent_id}. Error: ${error}`);
-                    return null;
-                }
-            }
-        };
-
-        const vulnerabilities_list = { data: { affected_items: [] } };
-        const group_agents = await getAgentsInGroup();
-
-        const common_ids = group_agents.map(agent => agent.id);
-
-        let vulncount = 0;
-
-        for (const agent_id of common_ids) {
-            const authToken = await authenticate();
-            const vulnerabilities = await getVulnerabilitiesForAgent(agent_id, authToken);
-            if (vulnerabilities) {
-                const filtered_vulnerabilities = vulnerabilities.data.affected_items.filter(vulnerability => vulnerability.condition !== "Package unfixed").map(vulnerability => {
-                    vulnerability.agent_ip = group_agents.find(agent => agent.id === agent_id).ip;
-                    vulnerability.agent_name = group_agents.find(agent => agent.id === agent_id).name;
-                    return vulnerability;
-                });
-                vulnerabilities_list.data.affected_items.push(...filtered_vulnerabilities);
-                vulncount += filtered_vulnerabilities.length;
+            ]
             }
         }
-
-        vulnerabilities_list.data.total_affected_items = vulncount;
-
-        return vulnerabilities_list;
+            
+    };
+    try {
+        const initialResponse = await opensearchClient.search({
+            index: indexName,
+            _source : [
+                "agent.name",
+                "agent.ip",
+                "data.vulnerability.cve",
+                "data.vulnerability.cvss.cvss3.base_score",
+                "data.vulnerability.severity",
+                "data.vulnerability.title",
+                "data.vulnerability.status",
+                "timestamp"
+            ],
+            scroll: '1m', // Set the scroll time
+            size: 1000, // Set an initial batch size
+            body: body,
+        });
+        let hits = initialResponse.body.hits.hits.map(hit => hit._source);
+        let scrollId = initialResponse.body._scroll_id;
+        
+        while (hits.length < initialResponse.body.hits.total.value) {
+            const scrollResponse = await opensearchClient.scroll({
+            scrollId: scrollId,
+            scroll: '1m',
+            });
+        
+            hits = hits.concat(scrollResponse.body.hits.hits.map(hit => hit._source));
+            scrollId = scrollResponse.body._scroll_id;
+        }
+        
+        await opensearchClient.clearScroll({
+            body: {
+            scroll_id: scrollId,
+            },
+        });
+      ///  return hits[0].data.vulnerability.cvss.cvss3.base_score
+        let formattedObject = hits.map(item => {
+            const cvss3BaseScore = item.data.vulnerability.cvss?.cvss3?.base_score || 'N/A';
+            return {
+                "agent_ip": item.agent.ip,
+                "agent_name": item.agent.name,
+                "severity": item.data.vulnerability.severity,
+                "cve": item.data.vulnerability.cve,
+                "title": item.data.vulnerability.title,
+                "cvss3_score": cvss3BaseScore,
+                "status": item.data.vulnerability.status,
+                "timestamp": item.timestamp
+            };
+        });
+        return formattedObject;
     } catch (error) {
         console.error(`Error occurred while getting findings: ${error}`);
         return { error: error.message };

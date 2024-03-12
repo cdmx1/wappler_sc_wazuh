@@ -7,6 +7,7 @@
     "groupIcon": "fas fa-shield-check",
     "title": "Get Findings",
     "icon": "fas fa-sync-alt",
+    "dataPickObject": true,
     "usedModules": {
       "node": {
         "axios": "^1.6.7"
@@ -54,16 +55,6 @@
             "serverDataBindings": true,
             "defaultValue": "wazuh",
             "help": "Enter the password for authenticating with the Wazuh server."
-          },
-          {
-            "name": "wazuhGroup",
-            "optionName": "Group",
-            "title": "Group",
-            "type": "text",
-            "required": true,
-            "serverDataBindings": true,
-            "defaultValue": "Servers",
-            "help": "Specify the group for retrieving findings. If not provided, all agents will be considered."
           }
         ]
       },
@@ -90,6 +81,7 @@
     "groupIcon": "fas fa-shield-check",
     "title": "Get Agents",
     "icon": "fas fa-download",
+    "dataPickObject": true,
     "usedModules": {
       "node": {
         "axios": "^1.6.7"
