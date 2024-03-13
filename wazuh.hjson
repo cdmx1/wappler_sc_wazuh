@@ -208,6 +208,7 @@
             "optionName": "agents_list",
             "title": "Agents List",
             "type": "text",
+            "serverDataBindings": true,
             "defaultValue": "all",
             "required": true,
             "help": "List of agent IDs (separated by comma), use the keyword 'all' to select all agents."
