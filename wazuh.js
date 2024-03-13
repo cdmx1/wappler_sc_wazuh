@@ -215,7 +215,12 @@ exports.getAgents = async function (options) {
             headers: { Authorization: authToken },
             params: { limit: 100000 }
         });
-        return response.data.data.affected_items;
+        const rearrangedData = response.data.data.affected_items.map(agent => {
+            const { id, name, version, ...rest } = agent;
+            return { id, name, version, ...rest };
+        });
+
+        return rearrangedData;
     } catch (error) {
         console.error(`Failed to retrieve agents. Error: ${error}`);
         return [];
