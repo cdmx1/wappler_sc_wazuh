@@ -6,11 +6,9 @@ exports.getWazuhFindings = async function (options) {
     const base_url = this.parse(options.base_url);
     const username = this.parse(options.username);
     const password = this.parse(options.password);
-    const today = new Date();
-    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago in milliseconds
+    let to_date = new Date().toISOString().split('T')[0];
+    let from_date = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    const from_date = `${sevenDaysAgo.getFullYear()}-${(sevenDaysAgo.getMonth() + 1).toString().padStart(2, '0')}-${sevenDaysAgo.getDate().toString().padStart(2, '0')}`;
-    const to_date = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
     const opensearchConfig = {
         node: base_url,
         auth: {
@@ -28,64 +26,140 @@ exports.getWazuhFindings = async function (options) {
     const indexName = this.parse('wazuh-alerts-*');
 
     const body = {
-        query: {
-            bool: {
-            must: [
-                {
-                    match_phrase: {
-                        "rule.groups" : "vulnerability-detector"
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "match_phrase": {
+                            "rule.groups": "vulnerability-detector"
+                        }
+                    },
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": from_date,
+                                "lte": to_date
+                            }
+                        }
                     }
+                ]
+            }
+        },
+        "aggregations": {
+            "agent": {
+                "terms": {
+                    "field": "agent.name",
+                    "order": {
+                        "_count": "desc"
+                    },
+                    "size": 1000
                 },
-                {
-                    "range": {
-                      "@timestamp": {
-                        "gte": from_date,
-                        "lte": to_date
-                      }
+                "aggs": {
+                    "package": {
+                        "terms": {
+                            "field": "data.vulnerability.package.name",
+                            "order": {
+                                "_count": "desc"
+                            },
+                            "size": 10000
+                        },
+                        "aggs": {
+                            "version": {
+                                "terms": {
+                                    "field": "data.vulnerability.package.version",
+                                    "order": {
+                                        "_count": "desc"
+                                    },
+                                    "size": 10000
+                                },
+                                "aggs": {
+                                    "cve": {
+                                        "terms": {
+                                            "field": "data.vulnerability.cve",
+                                            "order": {
+                                                "_count": "desc"
+                                            },
+                                            "size": 10000
+                                        },
+                                        "aggs": {
+                                            "hits": {
+                                                "top_hits": {
+                                                    "_source": {
+                                                        "includes": [
+                                                            "agent.name",
+                                                            "agent.ip",
+                                                            "data.vulnerability.cve",
+                                                            "data.vulnerability.cvss.cvss3.base_score",
+                                                            "data.vulnerability.severity",
+                                                            "data.vulnerability.title",
+                                                            "data.vulnerability.status",
+                                                            "@timestamp"
+                                                        ]
+                                                    },
+                                                    "size": 1
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            ]
             }
-        }
-            
+        },
+        "size": 0
     };
     try {
         const initialResponse = await opensearchClient.search({
             index: indexName,
-            _source : [
-                "agent.name",
-                "agent.ip",
-                "data.vulnerability.cve",
-                "data.vulnerability.cvss.cvss3.base_score",
-                "data.vulnerability.severity",
-                "data.vulnerability.title",
-                "data.vulnerability.status",
-                "timestamp"
-            ],
             scroll: '1m', // Set the scroll time
-            size: 1000, // Set an initial batch size
+            size: 1, // Set size to 0 to only retrieve aggregations
             body: body,
         });
-        let hits = initialResponse.body.hits.hits.map(hit => hit._source);
+    
+        let aggregations = initialResponse.body.aggregations;
         let scrollId = initialResponse.body._scroll_id;
-        
-        while (hits.length < initialResponse.body.hits.total.value) {
+    
+        while (true) {
             const scrollResponse = await opensearchClient.scroll({
-            scrollId: scrollId,
-            scroll: '1m',
+                scrollId: scrollId,
+                scroll: '1m',
             });
-        
-            hits = hits.concat(scrollResponse.body.hits.hits.map(hit => hit._source));
+    
+            if (scrollResponse.body.aggregations) {
+                // If there are aggregations in the scroll response, merge them with existing aggregations
+                aggregations = mergeAggregations(aggregations, scrollResponse.body.aggregations);
+            }
+    
+            if (!scrollResponse.body.hits || scrollResponse.body.hits.hits.length === 0) {
+                // Break the loop if there are no more hits to scroll
+                break;
+            }
+    
             scrollId = scrollResponse.body._scroll_id;
         }
-        
+    
         await opensearchClient.clearScroll({
             body: {
-            scroll_id: scrollId,
+                scroll_id: scrollId,
             },
         });
-      ///  return hits[0].data.vulnerability.cvss.cvss3.base_score
-        let formattedObject = hits.map(item => {
+       
+        let sourceData = [];
+        aggregations.agent.buckets.forEach(agentBucket => {
+            agentBucket.package.buckets.forEach(packageBucket => {
+                packageBucket.version.buckets.forEach(versionBucket => {
+                    versionBucket.cve.buckets.forEach(cveBucket => {
+                        cveBucket.hits.hits.hits.forEach(hit => {
+                            sourceData.push(hit._source);
+                        });
+                    });
+                });
+            });
+        });
+
+        let formattedObject = sourceData.map(item => {
             const cvss3BaseScore = item.data.vulnerability.cvss?.cvss3?.base_score || 'N/A';
             return {
                 "agent_ip": item.agent.ip,
@@ -98,7 +172,13 @@ exports.getWazuhFindings = async function (options) {
                 "timestamp": item.timestamp
             };
         });
-        return formattedObject;
+        
+        return {
+            data: {
+                affected_items: formattedObject,
+                total_affected_items: formattedObject.length
+            }
+        };
     } catch (error) {
         console.error(`Error occurred while getting findings: ${error}`);
         return { error: error.message };
