@@ -148,9 +148,9 @@
     ]
   },
   {
-    "type": "updateAgents",
+    "type": "upgradeAgents",
     "module": "wazuh",
-    "action": "updateAgents",
+    "action": "upgradeAgents",
     "groupTitle": "Wazuh",
     "groupIcon": "fas fa-shield-check",
     "title": "Update Agents",
@@ -170,7 +170,7 @@
             "title": "Name",
             "type": "text",
             "required": true,
-            "defaultValue": "updateAgents",
+            "defaultValue": "upgradeAgents",
             "help": "Specify the name of the action."
           },
           {
@@ -208,9 +208,9 @@
             "optionName": "agents_list",
             "title": "Agents List",
             "type": "text",
+             "required": true,
             "serverDataBindings": true,
             "defaultValue": "all",
-            "required": true,
             "help": "List of agent IDs (separated by comma), use the keyword 'all' to select all agents."
           },
           {

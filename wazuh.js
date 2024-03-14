@@ -232,6 +232,7 @@ exports.upgradeAgents = async function (options) {
         const base_url = this.parse(options.base_url) || "https://localhost:55000";
         const username = this.parse(options.username) || "wazuh";
         const password = this.parse(options.password) || "wazuh";
+        const agents   = this.parse(options.agents_list) || "all";
         
         const authenticate = async () => {
             try {
@@ -241,6 +242,7 @@ exports.upgradeAgents = async function (options) {
                         password: password
                     }
                 });
+                
                 if (response.status === 200) {
                     return `Bearer ${response.data}`;
                 } else {
@@ -251,25 +253,24 @@ exports.upgradeAgents = async function (options) {
             }
         };
 
-        const upgradeAgentsEndpoint = `${base_url}/agents/upgrade`;
+        const params = {};
+        if (options.pretty) params.pretty = options.pretty;
+        if (options.wait_for_complete) params.wait_for_complete = options.wait_for_complete;
+        if (options.agents_list) params.agents_list = agents;
+        if (options.force) params.force = options.force;
+       
+       const upgradeAgentsEndpoint = `${base_url}/agents/upgrade`;
 
         const authToken = await authenticate();
+       
         const response = await axios.put(upgradeAgentsEndpoint, {}, {
             headers: { 
                 Authorization: authToken,
                 'Content-Type': 'application/json'
             },
-            params: {
-                pretty: options.pretty || false,
-                wait_for_complete: options.wait_for_complete || false,
-                agents_list: options.agents_list || "all",
-                upgrade_version: options.upgrade_version,
-                use_http: options.use_http || false,
-                force: options.force || false,
-                group: options.group
-            }
+            params : params
         });
-
+       
         return response.data;
     } catch (error) {
         console.error(`Error occurred while upgrading agents: ${error}`);
